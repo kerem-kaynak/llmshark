@@ -21,23 +21,25 @@ Sharing the data model and explaining column relationships can be tedious and ti
 
 ## Installation
 
-### Using Make (Recommended)
+### Using the Installation Script (Recommended)
 
+1. Clone the repository:
 ```bash
-# Clone the repository
 git clone https://github.com/kerem-kaynak/llmshark.git
-
-# Navigate to the project directory
+   ```
+2. Navigate to the project directory:
+```bash
 cd llmshark
-
-# Install the binary
+```
+3. Run the installation script:
+```bash
 make install
 ```
 
-Make sure `$GOPATH/bin` is in your PATH. Add this to your `.bashrc` or `.zshrc`:
-```bash
-export PATH=$PATH:$(go env GOPATH)/bin
-```
+The script will automatically:
+- Build the LLMShark binary
+- Install it to your Go binary directory
+- Add the Go binary directory to your PATH
 
 ### Manual Installation
 

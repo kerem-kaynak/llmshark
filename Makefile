@@ -19,10 +19,9 @@ build:
 	@go build ${LDFLAGS} -o ${BINARY_NAME} cmd/main.go
 
 install: build
-	@echo "Installing ${BINARY_NAME} to ${INSTALL_PATH}..."
-	@mkdir -p ${INSTALL_PATH}
-	@cp ${BINARY_NAME} ${INSTALL_PATH}
-	@echo "Installation complete. Make sure ${INSTALL_PATH} is in your PATH"
+	@echo "Running installation script..."
+	@chmod +x install.sh
+	@PATH=$(PATH):$(GOPATH)/bin ./install.sh
 
 uninstall:
 	@echo "Removing ${BINARY_NAME}..."
