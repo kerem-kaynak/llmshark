@@ -1,8 +1,9 @@
-// internal/ui/events.go
 package ui
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,6 +31,21 @@ type cursorPosition struct {
 	column   int
 }
 
+// Deselect all schemas, tables, and columns
+func (m *model) deselectAll() {
+	for si := range m.schemas {
+		schema := &m.schemas[si]
+		schema.Selected = false
+		for ti := range schema.Tables {
+			table := &schema.Tables[ti]
+			table.Selected = false
+			for ci := range table.Columns {
+				table.Columns[ci].Selected = false
+			}
+		}
+	}
+}
+
 func (m model) updateCredentials(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -51,7 +67,8 @@ func (m model) updateCredentials(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleCredentials(creds)
 
 		case "esc":
-			return m, tea.Quit
+			m.state = stateExplorer // Return to explorer after editing credentials
+			return m, nil
 
 		case "tab", "shift+tab", "up", "down":
 			s := msg.String()
@@ -109,6 +126,12 @@ func (m model) updateExplorer(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.commentText = m.schemas[m.cursor.schema].Tables[m.cursor.table].Description
 				}
 			}
+		case "d": // Deselect all
+			m.deselectAll()
+			m.message = "All items deselected!"
+		case "e": // Edit connection details
+			m.state = stateEditCredentials
+			m.message = "Editing connection details..."
 		}
 	}
 
@@ -335,6 +358,7 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
+			// Save the comment
 			var schema, table, column string
 			schema = m.schemas[m.cursor.schema].Name
 
@@ -344,39 +368,83 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.cursor.table != -1 {
 				table = m.schemas[m.cursor.schema].Tables[m.cursor.table].Name
 			} else {
+				m.err = fmt.Errorf("no table or column selected")
 				return m, nil
 			}
 
 			ctx := context.Background()
+
+			// Update the comment
 			err := m.client.UpdateComment(ctx, schema, table, column, m.commentText)
 			if err != nil {
-				m.err = err
+				switch {
+				case errors.Is(err, postgres.ErrCommentTooLong):
+					m.err = fmt.Errorf("comment is too long (max 1000 characters)")
+				case errors.Is(err, postgres.ErrCommentEmpty):
+					m.err = fmt.Errorf("comment cannot be empty")
+				case errors.Is(err, postgres.ErrCommentMalicious):
+					m.err = fmt.Errorf("comment contains invalid characters or patterns")
+				default:
+					m.err = err
+				}
 				return m, nil
 			}
 
+			// Verify the comment was stored
+			storedComment, err := m.client.VerifyComment(ctx, schema, table, column)
+			if err != nil {
+				m.err = fmt.Errorf("failed to verify comment: %w", err)
+				return m, nil
+			}
+
+			if storedComment != m.commentText {
+				m.err = fmt.Errorf("comment verification failed: expected %q, got %q", m.commentText, storedComment)
+				return m, nil
+			}
+
+			// Update the comment in the model
 			if m.cursor.column != -1 {
 				m.schemas[m.cursor.schema].Tables[m.cursor.table].Columns[m.cursor.column].Description = m.commentText
 			} else {
 				m.schemas[m.cursor.schema].Tables[m.cursor.table].Description = m.commentText
 			}
 
+			// Return to explorer state
 			m.state = stateExplorer
 			m.commentText = ""
-			m.message = "Comment updated successfully!"
+			m.message = "Comment updated and verified successfully!"
 			return m, nil
 
 		case tea.KeyEsc:
+			// Cancel and return to explorer state
 			m.state = stateExplorer
 			m.commentText = ""
+			m.err = nil // Clear any previous errors
+			m.message = "Comment update cancelled"
 			return m, nil
 
 		case tea.KeyBackspace:
+			// Handle backspace
 			if len(m.commentText) > 0 {
 				m.commentText = m.commentText[:len(m.commentText)-1]
 			}
 			return m, nil
 
+		case tea.KeySpace:
+			// Explicitly handle space key
+			m.commentText += " "
+			return m, nil
+
+		case tea.KeyTab:
+			// Optionally handle tab key (you might want to add spaces or ignore it)
+			return m, nil
+
+		case tea.KeyLeft, tea.KeyRight, tea.KeyUp, tea.KeyDown:
+			// Optionally handle cursor movement keys
+			return m, nil
+
 		default:
+			// Handle regular text input
 			if msg.Type == tea.KeyRunes {
 				m.commentText += string(msg.Runes)
 			}

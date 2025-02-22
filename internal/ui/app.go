@@ -17,6 +17,7 @@ const (
 	stateCredentials
 	stateExplorer
 	stateComment
+	stateEditCredentials // New state for editing connection details
 )
 
 type model struct {
@@ -99,24 +100,14 @@ func (m model) Init() tea.Cmd {
 	)
 }
 
-func (m *model) initCredentials() tea.Msg {
-	store, err := storage.NewCredentialStore(m.config.CredentialsPath)
-	if err != nil {
-		return errMsg{err}
-	}
-	m.credStore = store
-
-	creds, err := store.Load()
-	if err == nil && creds != nil {
-		return credsMsg{creds}
-	}
-
-	return nil
-}
-
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Clear error message on any key press
+		if m.err != nil {
+			m.err = nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			if m.state != stateCredentials {
@@ -149,6 +140,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateExplorer(msg)
 	case stateComment:
 		return m.updateComment(msg)
+	case stateEditCredentials:
+		return m.updateCredentials(msg)
 	}
 
 	return m, cmd
@@ -162,6 +155,8 @@ func (m model) View() string {
 		return m.explorerView()
 	case stateComment:
 		return m.commentView()
+	case stateEditCredentials: // New state for editing connection details
+		return m.credentialsView() // Reuse the credentials view
 	default:
 		return "Loading..."
 	}

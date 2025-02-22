@@ -61,7 +61,7 @@ func (m model) explorerView() string {
 	var b strings.Builder
 
 	// Help text at the top
-	help := "↑/↓: navigate • space: select • →/←: expand/collapse • m: markdown • c: comment • q: quit\n"
+	help := "↑/↓: navigate • space: select • →/←: expand/collapse • d: deselect all • e: edit connection details • m: markdown • c: comment • q: quit\n"
 	b.WriteString(helpStyle.Render(help))
 	b.WriteString("\n")
 
@@ -198,22 +198,30 @@ func (m model) commentView() string {
 		return "Please select a table or column to comment"
 	}
 
-	b.WriteString(titleStyle.Render(fmt.Sprintf("Adding comment to %s: %s\n\n", itemType, itemName)))
+	// Title with proper spacing
+	b.WriteString(titleStyle.Render(fmt.Sprintf("Adding comment to %s: %s", itemType, itemName)))
+	b.WriteString("\n\n")
 
+	// Current comment with consistent spacing
 	if currentComment != "" {
-		b.WriteString("Current comment: ")
+		b.WriteString(fmt.Sprintf("%-15s", "Current comment:"))
 		b.WriteString(infoStyle.Render(currentComment))
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString("New comment: ")
-	b.WriteString(m.commentText)
+	// New comment input with consistent spacing
+	b.WriteString(fmt.Sprintf("%-15s", "New comment:"))
+	b.WriteString(normalStyle.Render(m.commentText))
+	b.WriteString("_") // Add cursor indicator
+	b.WriteString("\n\n")
 
-	help := "\n\nPress Enter to save, Esc to cancel"
-	b.WriteString(helpStyle.Render(help))
+	// Help text
+	b.WriteString(helpStyle.Render("Press Enter to save, Esc to cancel"))
 
+	// Error message if any
 	if m.err != nil {
-		b.WriteString("\n\n" + errorStyle.Render(m.err.Error()))
+		b.WriteString("\n\n")
+		b.WriteString(errorStyle.Render(m.err.Error()))
 	}
 
 	return b.String()

@@ -4,8 +4,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kerem-kaynak/llmshark/internal/storage"
@@ -236,20 +239,134 @@ func (c *Client) GetSchemas(ctx context.Context, filter SchemaFilter) ([]Schema,
 	return schemas, nil
 }
 
-func (c *Client) UpdateComment(ctx context.Context, schema, table, column, comment string) error {
-	var query string
-	if column == "" {
-		query = fmt.Sprintf("COMMENT ON TABLE %s.%s IS $1", schema, table)
-	} else {
-		query = fmt.Sprintf("COMMENT ON COLUMN %s.%s.%s IS $1", schema, table, column)
+// Common error messages
+var (
+	ErrCommentTooLong   = errors.New("comment exceeds maximum length of 1000 characters")
+	ErrCommentEmpty     = errors.New("comment cannot be empty")
+	ErrCommentMalicious = errors.New("comment contains potentially malicious content")
+)
+
+// sanitizeComment cleans and validates the comment input
+func sanitizeComment(comment string) (string, error) {
+	// Trim spaces
+	comment = strings.TrimSpace(comment)
+
+	// Check if empty after trimming
+	if comment == "" {
+		return "", ErrCommentEmpty
 	}
 
-	_, err := c.pool.Exec(ctx, query, comment)
+	// Check length (PostgreSQL has a limit, but we'll be conservative)
+	if len(comment) > 1000 {
+		return "", ErrCommentTooLong
+	}
+
+	// Check for potential SQL injection patterns
+	sqlInjectionPatterns := []string{
+		"--;",
+		"/*",
+		"*/",
+		"@@",
+		"EXEC",
+		"EXECUTE",
+		"UNION",
+		"SELECT",
+		"DELETE",
+		"DROP",
+		"UPDATE",
+		"INSERT",
+	}
+
+	commentUpper := strings.ToUpper(comment)
+	for _, pattern := range sqlInjectionPatterns {
+		if strings.Contains(commentUpper, pattern) {
+			return "", ErrCommentMalicious
+		}
+	}
+
+	// Remove or replace potentially problematic characters
+	// Keep alphanumeric, basic punctuation, and common special characters
+	sanitized := strings.Map(func(r rune) rune {
+		switch {
+		case unicode.IsLetter(r):
+			return r
+		case unicode.IsNumber(r):
+			return r
+		case unicode.IsSpace(r):
+			return r
+		case strings.ContainsRune(`.,!?()-_:;'"`, r):
+			return r
+		default:
+			return -1 // Drop other characters
+		}
+	}, comment)
+
+	// Escape single quotes for SQL
+	sanitized = strings.ReplaceAll(sanitized, "'", "''")
+
+	return sanitized, nil
+}
+
+func (c *Client) UpdateComment(ctx context.Context, schema, table, column, comment string) error {
+	// Sanitize the comment (user input)
+	sanitizedComment, err := sanitizeComment(comment)
+	if err != nil {
+		return fmt.Errorf("invalid comment: %w", err)
+	}
+
+	var query string
+	if column == "" {
+		query = fmt.Sprintf(`COMMENT ON TABLE "%s"."%s" IS '%s'`,
+			schema,
+			table,
+			sanitizedComment)
+	} else {
+		query = fmt.Sprintf(`COMMENT ON COLUMN "%s"."%s"."%s" IS '%s'`,
+			schema,
+			table,
+			column,
+			sanitizedComment)
+	}
+
+	// Execute the query
+	_, err = c.pool.Exec(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to update comment: %w", err)
 	}
 
 	return nil
+}
+
+func (c *Client) VerifyComment(ctx context.Context, schema, table, column string) (string, error) {
+	var query string
+	var args []interface{}
+
+	if column == "" {
+		query = `
+            SELECT obj_description(
+                (quote_ident($1) || '.' || quote_ident($2))::regclass
+            );
+        `
+		args = []interface{}{schema, table}
+	} else {
+		query = `
+            SELECT col_description(
+                (quote_ident($1) || '.' || quote_ident($2))::regclass,
+                (SELECT attnum FROM pg_attribute 
+                 WHERE attrelid = (quote_ident($1) || '.' || quote_ident($2))::regclass 
+                 AND attname = $3)
+            );
+        `
+		args = []interface{}{schema, table, column}
+	}
+
+	var comment sql.NullString
+	err := c.pool.QueryRow(ctx, query, args...).Scan(&comment)
+	if err != nil {
+		return "", fmt.Errorf("failed to verify comment: %w", err)
+	}
+
+	return comment.String, nil
 }
 
 func (c *Client) Close() {
