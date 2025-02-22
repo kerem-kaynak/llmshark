@@ -1,8 +1,134 @@
-# LLMShark
+# LLMShark 🦈
 
 LLMShark is a Terminal User Interface (TUI) application designed to streamline your PostgreSQL database interactions, particularly when working with Large Language Models (LLMs). It allows you to explore your database structure, add/edit comments, and export schema information in Markdown format, all from your terminal.
 
 Sharing the data model and explaining column relationships can be tedious and time-consuming. LLMShark was born out of this pain, providing a way to quickly generate a Markdown representation of your database schema, ready to be used in your LLM prompts.
+
+This project is heavily inspired by [LLMCat](https://github.com/azer/llmcat) and [LLMDog](https://github.com/doganarif/LLMDog) :)
+
+![llmshark.mp4](<https://media-hosting.imagekit.io//d8acdc9a0ebb49f5/llmshark.mp4?Expires=1834843038&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=HNVSq6zf6bQOKYlIlSHnctIbN6cNTwh~0AFNSebzhCfRZy1WAuzidy0VZdiMJCAuqX3rZ4WXfjM2-WdMEJbxj9Wp2xJBbXJ60XIlTEnIKq~H46v2aPGhYR376UkSGjZtKIDY4~-FBxO6JVfifpQ-NuQAaDDSM92IHioNzkgYYDxVMn1keyyi2WWL5cwaTjHbZVOSXtPdCyE55kDtsNtu3Zn0dPeaajqCpP2fOFv7rBU5lEdQjocc7v1Yic1eyGgejjLCZaBgTJgO89BVixEn3XebMY502mtbtJ6cFZPjOMKDphR8mnGy-mrbOsbaVw~xj0-ZKosO0RUlxcJ19hk0QQ__>)
+
+### Sample output
+
+Raw:
+
+```
+# Database Schema Documentation
+
+Generated: 2025-02-22 17:25:19
+
+## Schema: `shop`
+
+### Table: `orders`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `id` | `integer` | PRIMARY KEY, NOT NULL, orders_pkey | - |
+| `user_id` | `integer` | NOT NULL | - |
+| `total_amount` | `numeric(10,2)` | NOT NULL | Total amount of an order in the webshop |
+| `status` | `character varying(50)` | NOT NULL, DEFAULT 'pending'::character varying | - |
+| `created_at` | `timestamp without time zone` | DEFAULT CURRENT_TIMESTAMP | - |
+
+### Table: `products`
+
+Product catalog
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `id` | `integer` | PRIMARY KEY, NOT NULL, products_pkey | - |
+| `name` | `character varying(200)` | NOT NULL | - |
+| `description` | `text` | - | - |
+| `price` | `numeric(10,2)` | NOT NULL | Product price in USD |
+| `stock` | `integer` | NOT NULL, DEFAULT 0 | - |
+
+## Schema: `test`
+
+### Table: `categories`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `id` | `integer` | PRIMARY KEY, NOT NULL, categories_pkey | - |
+| `name` | `character varying(100)` | UNIQUE, NOT NULL, categories_name_key | name of categories test |
+| `description` | `text` | - | - |
+
+### Table: `users`
+
+User account information
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `username` | `character varying(50)` | UNIQUE, NOT NULL, users_username_key | - |
+| `email` | `character varying(255)` | NOT NULL | User's primary email address |
+| `created_at` | `timestamp without time zone` | DEFAULT CURRENT_TIMESTAMP | - |
+```
+
+Rendered:
+
+# Database Schema Documentation
+
+Generated: 2025-02-22 17:25:19
+
+## Schema: `shop`
+
+### Table: `orders`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `id` | `integer` | PRIMARY KEY, NOT NULL, orders_pkey | - |
+| `user_id` | `integer` | NOT NULL | - |
+| `total_amount` | `numeric(10,2)` | NOT NULL | Total amount of an order in the webshop |
+| `status` | `character varying(50)` | NOT NULL, DEFAULT 'pending'::character varying | - |
+| `created_at` | `timestamp without time zone` | DEFAULT CURRENT_TIMESTAMP | - |
+
+### Table: `products`
+
+Product catalog
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `id` | `integer` | PRIMARY KEY, NOT NULL, products_pkey | - |
+| `name` | `character varying(200)` | NOT NULL | - |
+| `description` | `text` | - | - |
+| `price` | `numeric(10,2)` | NOT NULL | Product price in USD |
+| `stock` | `integer` | NOT NULL, DEFAULT 0 | - |
+
+## Schema: `test`
+
+### Table: `categories`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `id` | `integer` | PRIMARY KEY, NOT NULL, categories_pkey | - |
+| `name` | `character varying(100)` | UNIQUE, NOT NULL, categories_name_key | name of categories test |
+| `description` | `text` | - | - |
+
+### Table: `users`
+
+User account information
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| `username` | `character varying(50)` | UNIQUE, NOT NULL, users_username_key | - |
+| `email` | `character varying(255)` | NOT NULL | User's primary email address |
+| `created_at` | `timestamp without time zone` | DEFAULT CURRENT_TIMESTAMP | - |
+
+---
 
 ## Features
 
