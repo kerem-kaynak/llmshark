@@ -94,7 +94,7 @@ func (m model) explorerView() string {
 				}
 
 				// Construct table line with explicit indentation
-				indent := "    " // Exactly 4 spaces
+				indent := "    "
 				marker := "▼"
 				if !table.Expanded {
 					marker = "▶"
@@ -121,7 +121,7 @@ func (m model) explorerView() string {
 						}
 
 						// Column line with explicit indentation
-						columnIndent := "        " // Exactly 8 spaces
+						columnIndent := "        "
 						columnPrefix := "  "
 						if col.Selected {
 							columnPrefix = "* "
@@ -212,7 +212,7 @@ func (m model) commentView() string {
 	// New comment input with consistent spacing
 	b.WriteString(fmt.Sprintf("%-15s", "New comment:"))
 	b.WriteString(normalStyle.Render(m.commentText))
-	b.WriteString("_") // Add cursor indicator
+	b.WriteString("_")
 	b.WriteString("\n\n")
 
 	// Help text

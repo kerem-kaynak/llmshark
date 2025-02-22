@@ -17,7 +17,7 @@ const (
 	stateCredentials
 	stateExplorer
 	stateComment
-	stateEditCredentials // New state for editing connection details
+	stateEditCredentials
 )
 
 type model struct {
@@ -52,7 +52,7 @@ func NewApp(cfg *config.Config) (*tea.Program, error) {
 	m := &model{
 		config:    cfg,
 		state:     stateCredentials,
-		credStore: store, // Set the credential store
+		credStore: store,
 		cursor: cursor{
 			schema: 0,
 			table:  -1,
@@ -155,8 +155,8 @@ func (m model) View() string {
 		return m.explorerView()
 	case stateComment:
 		return m.commentView()
-	case stateEditCredentials: // New state for editing connection details
-		return m.credentialsView() // Reuse the credentials view
+	case stateEditCredentials:
+		return m.credentialsView()
 	default:
 		return "Loading..."
 	}

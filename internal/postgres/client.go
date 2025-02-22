@@ -1,4 +1,3 @@
-// internal/postgres/client.go
 package postgres
 
 import (
@@ -246,7 +245,6 @@ var (
 	ErrCommentMalicious = errors.New("comment contains potentially malicious content")
 )
 
-// sanitizeComment cleans and validates the comment input
 func sanitizeComment(comment string) (string, error) {
 	// Trim spaces
 	comment = strings.TrimSpace(comment)

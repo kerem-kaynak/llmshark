@@ -25,7 +25,7 @@ type schemasMsg struct {
 }
 
 type cursorPosition struct {
-	itemType string // "schema", "table", or "column"
+	itemType string
 	schema   int
 	table    int
 	column   int
@@ -67,7 +67,7 @@ func (m model) updateCredentials(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleCredentials(creds)
 
 		case "esc":
-			m.state = stateExplorer // Return to explorer after editing credentials
+			m.state = stateExplorer
 			return m, nil
 
 		case "tab", "shift+tab", "up", "down":
@@ -126,10 +126,10 @@ func (m model) updateExplorer(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.commentText = m.schemas[m.cursor.schema].Tables[m.cursor.table].Description
 				}
 			}
-		case "d": // Deselect all
+		case "d":
 			m.deselectAll()
 			m.message = "All items deselected!"
-		case "e": // Edit connection details
+		case "e":
 			m.state = stateEditCredentials
 			m.message = "Editing connection details..."
 		}
@@ -419,7 +419,7 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Cancel and return to explorer state
 			m.state = stateExplorer
 			m.commentText = ""
-			m.err = nil // Clear any previous errors
+			m.err = nil
 			m.message = "Comment update cancelled"
 			return m, nil
 

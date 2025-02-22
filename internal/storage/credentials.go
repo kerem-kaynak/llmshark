@@ -78,7 +78,7 @@ func (s *CredentialStore) Load() (*Credentials, error) {
 	data, err := os.ReadFile(s.path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil // No credentials stored yet
+			return nil, nil
 		}
 		return nil, err
 	}
