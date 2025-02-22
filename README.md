@@ -5,8 +5,7 @@ LLMShark is a Terminal User Interface (TUI) application designed to streamline y
 Sharing the data model and explaining column relationships can be tedious and time-consuming. LLMShark was born out of this pain, providing a way to quickly generate a Markdown representation of your database schema, ready to be used in your LLM prompts.
 
 This project is heavily inspired by [LLMCat](https://github.com/azer/llmcat) and [LLMDog](https://github.com/doganarif/LLMDog) :)
-
-![llmshark.mp4](<https://media-hosting.imagekit.io//d8acdc9a0ebb49f5/llmshark.mp4?Expires=1834843038&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=HNVSq6zf6bQOKYlIlSHnctIbN6cNTwh~0AFNSebzhCfRZy1WAuzidy0VZdiMJCAuqX3rZ4WXfjM2-WdMEJbxj9Wp2xJBbXJ60XIlTEnIKq~H46v2aPGhYR376UkSGjZtKIDY4~-FBxO6JVfifpQ-NuQAaDDSM92IHioNzkgYYDxVMn1keyyi2WWL5cwaTjHbZVOSXtPdCyE55kDtsNtu3Zn0dPeaajqCpP2fOFv7rBU5lEdQjocc7v1Yic1eyGgejjLCZaBgTJgO89BVixEn3XebMY502mtbtJ6cFZPjOMKDphR8mnGy-mrbOsbaVw~xj0-ZKosO0RUlxcJ19hk0QQ__>)
+[![llmshark.mp4](<https://media-hosting.imagekit.io//d8acdc9a0ebb49f5/llmshark.mp4?Expires=1834843038&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=HNVSq6zf6bQOKYlIlSHnctIbN6cNTwh~0AFNSebzhCfRZy1WAuzidy0VZdiMJCAuqX3rZ4WXfjM2-WdMEJbxj9Wp2xJBbXJ60XIlTEnIKq~H46v2aPGhYR376UkSGjZtKIDY4~-FBxO6JVfifpQ-NuQAaDDSM92IHioNzkgYYDxVMn1keyyi2WWL5cwaTjHbZVOSXtPdCyE55kDtsNtu3Zn0dPeaajqCpP2fOFv7rBU5lEdQjocc7v1Yic1eyGgejjLCZaBgTJgO89BVixEn3XebMY502mtbtJ6cFZPjOMKDphR8mnGy-mrbOsbaVw~xj0-ZKosO0RUlxcJ19hk0QQ__>)]
 
 ### Sample output
 
