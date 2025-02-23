@@ -22,7 +22,8 @@ type credsMsg struct {
 
 type noCredsMsg struct{}
 
-type schemasMsg struct {
+type connectedMsg struct {
+	client  *postgres.Client
 	schemas []postgres.Schema
 }
 
@@ -50,12 +51,10 @@ func (m *model) deselectAll() {
 func (m model) updateCredentials(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Clear error on any key press
 		m.err = nil
 
 		switch msg.String() {
 		case "enter":
-			// Clear existing data before attempting new connection
 			m.schemas = nil
 			m.client = nil
 
@@ -72,7 +71,8 @@ func (m model) updateCredentials(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			return m.handleCredentials(creds)
+			m.state = stateLoading
+			return m, connectToDB(creds)
 
 		case "esc":
 			m.state = stateExplorer

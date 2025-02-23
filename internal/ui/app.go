@@ -140,21 +140,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case errMsg:
 		m.err = msg.error
-		// Clear schemas and client when there's a connection error
 		m.schemas = nil
 		m.client = nil
-		// Transition to credentials view when there's a connection error
 		m.state = stateCredentials
 		return m, nil
 
 	case credsMsg:
-		// Clear existing data before attempting new connection
 		m.schemas = nil
-		m.client = nil
 		m.state = stateLoading
 		return m, connectToDB(msg.creds)
 
-	case schemasMsg:
+	case connectedMsg:
+		m.client = msg.client
 		m.schemas = msg.schemas
 		m.message = "Schema loaded successfully!"
 		m.state = stateExplorer
@@ -198,9 +195,10 @@ func connectToDB(creds *storage.Credentials) tea.Cmd {
 
 		schemas, err := client.GetSchemas(ctx, postgres.DefaultSchemaFilter)
 		if err != nil {
+			client.Close()
 			return errMsg{err}
 		}
-		return schemasMsg{schemas}
+		return connectedMsg{client: client, schemas: schemas}
 	}
 }
 
@@ -223,26 +221,4 @@ func (m model) View() string {
 	default:
 		return fmt.Sprintf("%s Loading...", m.spinner.View())
 	}
-}
-
-func (m model) handleCredentials(creds *storage.Credentials) (tea.Model, tea.Cmd) {
-	ctx := context.Background()
-	client, err := postgres.NewClient(ctx, creds)
-	if err != nil {
-		m.err = err
-		return m, nil
-	}
-
-	m.client = client
-	m.state = stateExplorer
-	return m, m.fetchSchemas
-}
-
-func (m *model) fetchSchemas() tea.Msg {
-	ctx := context.Background()
-	schemas, err := m.client.GetSchemas(ctx, postgres.DefaultSchemaFilter)
-	if err != nil {
-		return errMsg{err}
-	}
-	return schemasMsg{schemas}
 }
