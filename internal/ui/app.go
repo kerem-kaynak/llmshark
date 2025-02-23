@@ -48,7 +48,6 @@ type cursor struct {
 }
 
 func NewApp(cfg *config.Config) (*tea.Program, error) {
-	// Initialize credential store first
 	store, err := storage.NewCredentialStore(cfg.CredentialsPath)
 	if err != nil {
 		return nil, err
@@ -124,7 +123,6 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// If we're in credentials state and there's an error, clear it on any key press
 		if m.state == stateCredentials && m.err != nil {
 			m.err = nil
 		}
@@ -174,7 +172,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, spinnerCmd
 	}
 
-	// Handle state-specific updates
 	switch m.state {
 	case stateCredentials:
 		return m.updateCredentials(msg)

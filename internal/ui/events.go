@@ -33,7 +33,6 @@ type cursorPosition struct {
 	column   int
 }
 
-// Deselect all schemas, tables, and columns
 func (m *model) deselectAll() {
 	for si := range m.schemas {
 		schema := &m.schemas[si]
@@ -151,9 +150,7 @@ func (m model) updateExplorer(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) getVisibleItems() []cursorPosition {
 	var items []cursorPosition
 
-	// Iterate through schemas
 	for s := range m.schemas {
-		// Add schema
 		items = append(items, cursorPosition{
 			itemType: "schema",
 			schema:   s,
@@ -165,7 +162,6 @@ func (m *model) getVisibleItems() []cursorPosition {
 			continue
 		}
 
-		// Add tables
 		for t := range m.schemas[s].Tables {
 			items = append(items, cursorPosition{
 				itemType: "table",
@@ -178,7 +174,6 @@ func (m *model) getVisibleItems() []cursorPosition {
 				continue
 			}
 
-			// Add columns
 			for c := range m.schemas[s].Tables[t].Columns {
 				items = append(items, cursorPosition{
 					itemType: "column",
@@ -199,7 +194,6 @@ func (m *model) moveCursor(delta int) {
 		return
 	}
 
-	// Find current position in the list
 	currentIdx := -1
 	for i, item := range items {
 		if item.schema == m.cursor.schema &&
@@ -210,7 +204,6 @@ func (m *model) moveCursor(delta int) {
 		}
 	}
 
-	// Calculate new position
 	newIdx := currentIdx + delta
 	if newIdx < 0 {
 		newIdx = 0
@@ -219,7 +212,6 @@ func (m *model) moveCursor(delta int) {
 		newIdx = len(items) - 1
 	}
 
-	// Update cursor
 	newPos := items[newIdx]
 	m.cursor.schema = newPos.schema
 	m.cursor.table = newPos.table
@@ -233,7 +225,6 @@ func (m *model) expand() {
 
 	schema := &m.schemas[m.cursor.schema]
 	if m.cursor.table == -1 {
-		// Expand schema
 		schema.Expanded = true
 		if len(schema.Tables) > 0 {
 			m.cursor.table = 0
@@ -247,7 +238,6 @@ func (m *model) expand() {
 
 	table := &schema.Tables[m.cursor.table]
 	if m.cursor.column == -1 {
-		// Expand table
 		table.Expanded = true
 		if len(table.Columns) > 0 {
 			m.cursor.column = 0
@@ -262,7 +252,6 @@ func (m *model) collapse() {
 
 	schema := &m.schemas[m.cursor.schema]
 	if m.cursor.column != -1 {
-		// Collapse to table level
 		m.cursor.column = -1
 		return
 	}
@@ -273,16 +262,13 @@ func (m *model) collapse() {
 		}
 		table := &schema.Tables[m.cursor.table]
 		if table.Expanded {
-			// Collapse table
 			table.Expanded = false
 		} else {
-			// Collapse to schema level
 			m.cursor.table = -1
 		}
 		return
 	}
 
-	// Collapse schema
 	if schema.Expanded {
 		schema.Expanded = false
 		m.cursor.table = -1

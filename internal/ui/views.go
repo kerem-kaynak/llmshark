@@ -1,4 +1,3 @@
-// internal/ui/views.go
 package ui
 
 import (
@@ -52,7 +51,6 @@ var (
 func (m model) credentialsView() string {
 	var b strings.Builder
 
-	// Remove the newlines from the title render and handle spacing explicitly
 	b.WriteString(titleStyle.Render("PostgreSQL Connection Details"))
 	b.WriteString("\n\n")
 
@@ -96,7 +94,6 @@ func (m model) commentView() string {
 		return "Please select a table or column to comment"
 	}
 
-	// Title without newlines in the style render
 	b.WriteString(titleStyle.Render(fmt.Sprintf("Adding comment to %s: %s", itemType, itemName)))
 	b.WriteString("\n\n")
 
