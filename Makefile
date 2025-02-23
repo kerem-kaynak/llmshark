@@ -19,6 +19,8 @@ build:
 	@go build ${LDFLAGS} -o ${BINARY_NAME} cmd/main.go
 
 install: build
+	@echo "Installing ${BINARY_NAME} to ${INSTALL_PATH}..."
+	@cp ${BINARY_NAME} ${INSTALL_PATH}/${BINARY_NAME}
 	@echo "Running installation script..."
 	@chmod +x install.sh
 	@PATH=$(PATH):$(GOPATH)/bin ./install.sh
@@ -30,4 +32,5 @@ uninstall:
 clean:
 	@echo "Cleaning..."
 	@rm -f ${BINARY_NAME}
+	@rm -f ${INSTALL_PATH}/${BINARY_NAME}
 	@go clean

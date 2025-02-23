@@ -11,26 +11,26 @@ SHELL_NAME=$(basename "$SHELL")
 
 # Function to add to PATH
 add_to_path() {
-  if grep -q "$GO_BIN_DIR" "$1"; then
-    echo "$GO_BIN_DIR is already in your PATH in $1."
-  else
-    echo "Adding $GO_BIN_DIR to PATH in $1"
-    echo "export PATH=\"\$PATH:$GO_BIN_DIR\"" >> "$1"
-  fi
+    if grep -q "$GO_BIN_DIR" "$1"; then
+        echo "$GO_BIN_DIR is already in your PATH in $1."
+    else
+        echo "Adding $GO_BIN_DIR to PATH in $1"
+        echo "export PATH=\"\$PATH:$GO_BIN_DIR\"" >> "$1"
+    fi
 }
 
 # Handle different shell types
 if [[ "$SHELL_NAME" == "bash" ]]; then
-  CONFIG_FILE="$HOME_DIR/.bashrc"
-  add_to_path "$CONFIG_FILE"
+    CONFIG_FILE="$HOME_DIR/.bashrc"
+    add_to_path "$CONFIG_FILE"
 elif [[ "$SHELL_NAME" == "zsh" ]]; then
-  CONFIG_FILE="$HOME_DIR/.zshrc"
-  add_to_path "$CONFIG_FILE"
+    CONFIG_FILE="$HOME_DIR/.zshrc"
+    add_to_path "$CONFIG_FILE"
 else
-  echo "Unsupported shell: $SHELL_NAME. Please manually add $GO_BIN_DIR to your PATH."
-  exit 1
+    echo "Unsupported shell: $SHELL_NAME. Please manually add $GO_BIN_DIR to your PATH."
+    exit 1
 fi
 
 # Print instructions to update the current session
-echo "LLMShark has been successfully installed."
+echo "LLMShark has been successfully installed to $GO_BIN_DIR"
 echo "Please run 'source $CONFIG_FILE' or open a new terminal to start using llmshark."
