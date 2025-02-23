@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 	"unicode"
@@ -55,8 +56,12 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, creds *storage.Credentials) (*Client, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		creds.User, creds.Password, creds.Host, creds.Port, creds.Database)
+	// URL-encode the username and password
+	user := url.QueryEscape(creds.User)
+	password := url.QueryEscape(creds.Password)
+
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require",
+		user, password, creds.Host, creds.Port, creds.Database)
 
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
