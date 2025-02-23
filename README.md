@@ -6,7 +6,7 @@ Sharing the data model and explaining column relationships can be tedious and ti
 
 This project is heavily inspired by [LLMCat](https://github.com/azer/llmcat) and [LLMDog](https://github.com/doganarif/LLMDog) :)
 
-https://github.com/user-attachments/assets/11fec75c-4a9e-4e5c-9e89-d31136dee8fd
+https://github.com/user-attachments/assets/5617e525-7fbd-4292-8108-1c01cd259211
 
 ### Sample output
 
