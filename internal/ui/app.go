@@ -25,20 +25,20 @@ const (
 )
 
 type model struct {
-	config      *config.Config
-	state       state
-	client      *postgres.Client
-	credStore   *storage.CredentialStore
-	schemas     []postgres.Schema
-	inputs      []textinput.Model
-	cursor      cursor
-	activeInput int
-	err         error
-	width       int
-	height      int
-	message     string
-	commentText string
-	spinner     spinner.Model
+	config       *config.Config
+	state        state
+	client       *postgres.Client
+	credStore    *storage.CredentialStore
+	schemas      []postgres.Schema
+	inputs       []textinput.Model
+	cursor       cursor
+	activeInput  int
+	err          error
+	width        int
+	height       int
+	message      string
+	commentInput textinput.Model
+	spinner      spinner.Model
 }
 
 type cursor struct {
@@ -81,6 +81,10 @@ func NewApp(cfg *config.Config) (*tea.Program, error) {
 		inputs[i] = t
 	}
 
+	commentInput := textinput.New()
+	commentInput.Placeholder = "Enter comment"
+	commentInput.Focus()
+
 	m := &model{
 		config:    cfg,
 		state:     stateLoading,
@@ -90,10 +94,11 @@ func NewApp(cfg *config.Config) (*tea.Program, error) {
 			table:  -1,
 			column: -1,
 		},
-		activeInput: 0,
-		spinner:     s,
-		inputs:      inputs,
-		err:         nil,
+		activeInput:  0,
+		spinner:      s,
+		inputs:       inputs,
+		err:          nil,
+		commentInput: commentInput,
 	}
 
 	return tea.NewProgram(m, tea.WithAltScreen()), nil

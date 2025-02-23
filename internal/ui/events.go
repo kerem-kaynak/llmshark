@@ -130,10 +130,11 @@ func (m model) updateExplorer(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor.table != -1 {
 				m.state = stateComment
 				if m.cursor.column != -1 {
-					m.commentText = m.schemas[m.cursor.schema].Tables[m.cursor.table].Columns[m.cursor.column].Description
+					m.commentInput.SetValue(m.schemas[m.cursor.schema].Tables[m.cursor.table].Columns[m.cursor.column].Description)
 				} else {
-					m.commentText = m.schemas[m.cursor.schema].Tables[m.cursor.table].Description
+					m.commentInput.SetValue(m.schemas[m.cursor.schema].Tables[m.cursor.table].Description)
 				}
+				m.commentInput.Focus()
 			}
 		case "d":
 			m.deselectAll()
@@ -368,6 +369,7 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEnter:
 			// Save the comment
+			commentText := m.commentInput.Value()
 			var schema, table, column string
 			schema = m.schemas[m.cursor.schema].Name
 
@@ -384,7 +386,7 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ctx := context.Background()
 
 			// Update the comment
-			err := m.client.UpdateComment(ctx, schema, table, column, m.commentText)
+			err := m.client.UpdateComment(ctx, schema, table, column, commentText)
 			if err != nil {
 				switch {
 				case errors.Is(err, postgres.ErrCommentTooLong):
@@ -406,59 +408,37 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			if storedComment != m.commentText {
-				m.err = fmt.Errorf("comment verification failed: expected %q, got %q", m.commentText, storedComment)
+			if storedComment != commentText {
+				m.err = fmt.Errorf("comment verification failed: expected %q, got %q", commentText, storedComment)
 				return m, nil
 			}
 
 			// Update the comment in the model
 			if m.cursor.column != -1 {
-				m.schemas[m.cursor.schema].Tables[m.cursor.table].Columns[m.cursor.column].Description = m.commentText
+				m.schemas[m.cursor.schema].Tables[m.cursor.table].Columns[m.cursor.column].Description = commentText
 			} else {
-				m.schemas[m.cursor.schema].Tables[m.cursor.table].Description = m.commentText
+				m.schemas[m.cursor.schema].Tables[m.cursor.table].Description = commentText
 			}
 
 			// Return to explorer state
 			m.state = stateExplorer
-			m.commentText = ""
+			m.commentInput.Reset()
 			m.message = "Comment updated and verified successfully!"
 			return m, nil
 
 		case tea.KeyEsc:
 			// Cancel and return to explorer state
 			m.state = stateExplorer
-			m.commentText = ""
+			m.commentInput.Reset()
 			m.err = nil
 			m.message = "Comment update cancelled"
 			return m, nil
-
-		case tea.KeyBackspace:
-			// Handle backspace
-			if len(m.commentText) > 0 {
-				m.commentText = m.commentText[:len(m.commentText)-1]
-			}
-			return m, nil
-
-		case tea.KeySpace:
-			// Explicitly handle space key
-			m.commentText += " "
-			return m, nil
-
-		case tea.KeyTab:
-			// Optionally handle tab key (you might want to add spaces or ignore it)
-			return m, nil
-
-		case tea.KeyLeft, tea.KeyRight, tea.KeyUp, tea.KeyDown:
-			// Optionally handle cursor movement keys
-			return m, nil
-
-		default:
-			// Handle regular text input
-			if msg.Type == tea.KeyRunes {
-				m.commentText += string(msg.Runes)
-			}
-			return m, nil
 		}
+
+		// Handle all other key events with the textinput component
+		var cmd tea.Cmd
+		m.commentInput, cmd = m.commentInput.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil

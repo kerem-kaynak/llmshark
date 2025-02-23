@@ -6,172 +6,70 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 var (
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("39"))
+			Foreground(lipgloss.Color("39")).
+			MarginLeft(0).
+			PaddingLeft(0)
 
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("205")).
-			Bold(true)
+			Bold(true).
+			MarginLeft(0).
+			PaddingLeft(0)
 
 	normalStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("252"))
+			Foreground(lipgloss.Color("252")).
+			MarginLeft(0).
+			PaddingLeft(0)
 
 	errorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("196")).
-			Bold(true)
+			Bold(true).
+			MarginLeft(0).
+			PaddingLeft(0)
 
 	infoStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("86"))
+			Foreground(lipgloss.Color("86")).
+			MarginLeft(0).
+			PaddingLeft(0)
 
 	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
+			Foreground(lipgloss.Color("241")).
+			MarginLeft(0).
+			PaddingLeft(0)
 
 	inputLabelStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("111"))
+			Foreground(lipgloss.Color("111")).
+			MarginLeft(0).
+			PaddingLeft(0)
 )
 
 func (m model) credentialsView() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("PostgreSQL Connection Details\n\n"))
+	// Remove the newlines from the title render and handle spacing explicitly
+	b.WriteString(titleStyle.Render("PostgreSQL Connection Details"))
+	b.WriteString("\n\n")
 
 	labels := []string{"Host:", "Port:", "Database:", "User:", "Password:"}
 	for i := range m.inputs {
-		label := inputLabelStyle.Render(fmt.Sprintf("%-10s ", labels[i]))
-		b.WriteString(label)
-		b.WriteString(m.inputs[i].View())
-		b.WriteString("\n")
+		label := inputLabelStyle.Render(labels[i])
+		inputView := m.inputs[i].View()
+		line := fmt.Sprintf("%-12s %s", label, inputView)
+		b.WriteString(line + "\n")
 	}
 
 	if m.err != nil {
-		b.WriteString("\n" + errorStyle.Render(m.err.Error()))
+		b.WriteString("\n" + errorStyle.Render(wordwrap.String(m.err.Error(), m.width)))
 	}
 
 	help := "\nPress Enter to connect, Esc to cancel"
 	b.WriteString(helpStyle.Render(help))
-
-	return b.String()
-}
-
-func (m model) explorerView() string {
-	var b strings.Builder
-
-	// Help text at the top
-	help := "↑/↓: navigate • space: select • →/←: expand/collapse • d: deselect all • e: edit connection details • m: markdown • c: comment • q: quit\n"
-	b.WriteString(helpStyle.Render(help))
-	b.WriteString("\n")
-
-	// Render schemas
-	for i, schema := range m.schemas {
-		style := normalStyle
-		if m.cursor.schema == i && m.cursor.table == -1 && m.cursor.column == -1 {
-			style = selectedStyle
-		}
-
-		// Schema line
-		schemaMarker := "▼"
-		if !schema.Expanded {
-			schemaMarker = "▶"
-		}
-
-		schemaLine := schemaMarker + " " + schema.Name
-		if schema.Selected {
-			schemaLine = "* " + schemaLine
-		}
-
-		b.WriteString(style.Render(schemaLine) + "\n")
-
-		if schema.Expanded {
-			// Render tables
-			for j, table := range schema.Tables {
-				style := normalStyle
-				if m.cursor.schema == i && m.cursor.table == j && m.cursor.column == -1 {
-					style = selectedStyle
-				}
-
-				// Construct table line with explicit indentation
-				indent := "    "
-				marker := "▼"
-				if !table.Expanded {
-					marker = "▶"
-				}
-
-				tableLine := fmt.Sprintf("%s%s %s", indent, marker, table.Name)
-
-				if table.Selected {
-					tableLine = fmt.Sprintf("%s* %s", indent, marker+" "+table.Name)
-				}
-
-				b.WriteString(style.Render(tableLine))
-				if table.Description != "" {
-					b.WriteString(infoStyle.Render(" - " + table.Description))
-				}
-				b.WriteString("\n")
-
-				if table.Expanded {
-					// Render columns
-					for k, col := range table.Columns {
-						style := normalStyle
-						if m.cursor.schema == i && m.cursor.table == j && m.cursor.column == k {
-							style = selectedStyle
-						}
-
-						// Column line with explicit indentation
-						columnIndent := "        "
-						columnPrefix := "  "
-						if col.Selected {
-							columnPrefix = "* "
-						}
-
-						columnLine := columnIndent + columnPrefix + col.Name
-
-						if col.Type != "" {
-							columnLine += ": " + col.Type
-
-							constraints := []string{}
-							if !col.IsNullable {
-								constraints = append(constraints, "NOT NULL")
-							}
-							if col.IsPrimary {
-								constraints = append(constraints, "PRIMARY KEY")
-							}
-							if col.IsUnique {
-								constraints = append(constraints, "UNIQUE")
-							}
-							if col.HasDefault {
-								constraints = append(constraints, fmt.Sprintf("DEFAULT %s", col.Default))
-							}
-							if len(col.Constraints) > 0 {
-								constraints = append(constraints, col.Constraints...)
-							}
-
-							if len(constraints) > 0 {
-								columnLine += " (" + strings.Join(constraints, ", ") + ")"
-							}
-						}
-
-						b.WriteString(style.Render(columnLine))
-						if col.Description != "" {
-							b.WriteString(infoStyle.Render(" - " + col.Description))
-						}
-						b.WriteString("\n")
-					}
-				}
-			}
-		}
-	}
-
-	if m.message != "" {
-		b.WriteString("\n" + infoStyle.Render(m.message))
-	}
-
-	if m.err != nil {
-		b.WriteString("\n" + errorStyle.Render(m.err.Error()))
-	}
 
 	return b.String()
 }
@@ -198,30 +96,161 @@ func (m model) commentView() string {
 		return "Please select a table or column to comment"
 	}
 
-	// Title with proper spacing
+	// Title without newlines in the style render
 	b.WriteString(titleStyle.Render(fmt.Sprintf("Adding comment to %s: %s", itemType, itemName)))
 	b.WriteString("\n\n")
 
-	// Current comment with consistent spacing
+	// Current comment
 	if currentComment != "" {
-		b.WriteString(fmt.Sprintf("%-15s", "Current comment:"))
+		b.WriteString("Current comment: ")
 		b.WriteString(infoStyle.Render(currentComment))
 		b.WriteString("\n\n")
 	}
 
-	// New comment input with consistent spacing
-	b.WriteString(fmt.Sprintf("%-15s", "New comment:"))
-	b.WriteString(normalStyle.Render(m.commentText))
-	b.WriteString("_")
-	b.WriteString("\n\n")
+	// New comment input
+	newCommentLabel := "New comment:"
+	line := fmt.Sprintf("%-15s %s", newCommentLabel, m.commentInput.View())
+	b.WriteString(line + "\n\n")
 
 	// Help text
-	b.WriteString(helpStyle.Render("Press Enter to save, Esc to cancel"))
+	help := "Press Enter to save, Esc to cancel"
+	b.WriteString(helpStyle.Render(help))
 
-	// Error message if any
+	// Error message
 	if m.err != nil {
-		b.WriteString("\n\n")
-		b.WriteString(errorStyle.Render(m.err.Error()))
+		b.WriteString("\n\n" + errorStyle.Render(wordwrap.String(m.err.Error(), m.width)))
+	}
+
+	return b.String()
+}
+
+func (m model) explorerView() string {
+	var b strings.Builder
+
+	// Help text at the top
+	help := "↑/↓: navigate • space: select • →/←: expand/collapse • d: deselect all • e: edit connection details • m: markdown • c: comment • q: quit\n"
+	b.WriteString(helpStyle.Render(wordwrap.String(help, m.width)))
+	b.WriteString("\n")
+
+	// Render schemas
+	for i, schema := range m.schemas {
+		style := normalStyle
+		if m.cursor.schema == i && m.cursor.table == -1 && m.cursor.column == -1 {
+			style = selectedStyle
+		}
+
+		// Schema line
+		schemaMarker := "▼"
+		if !schema.Expanded {
+			schemaMarker = "▶"
+		}
+
+		schemaLine := schemaMarker + " " + schema.Name
+		if schema.Selected {
+			schemaLine = "* " + schemaLine
+		}
+
+		b.WriteString(style.Render(wordwrap.String(schemaLine, m.width)) + "\n")
+
+		if schema.Expanded {
+			// Render tables
+			for j, table := range schema.Tables {
+				style := normalStyle
+				if m.cursor.schema == i && m.cursor.table == j && m.cursor.column == -1 {
+					style = selectedStyle
+				}
+
+				// Construct table line
+				indent := "    "
+				marker := "▼"
+				if !table.Expanded {
+					marker = "▶"
+				}
+
+				tableLine := fmt.Sprintf("%s%s %s", indent, marker, table.Name)
+				if table.Selected {
+					tableLine = fmt.Sprintf("%s* %s", indent, marker+" "+table.Name)
+				}
+
+				if table.Description != "" {
+					description := wordwrap.String(table.Description, m.width-len(indent)-4)
+					descriptionLines := strings.Split(description, "\n")
+					for i, line := range descriptionLines {
+						if i == 0 {
+							tableLine += " " + infoStyle.Render("- "+line)
+						} else {
+							tableLine += "\n" + infoStyle.Render(strings.Repeat(" ", len(indent)+4)+line)
+						}
+					}
+				}
+
+				b.WriteString(style.Render(wordwrap.String(tableLine, m.width)) + "\n")
+
+				if table.Expanded {
+					// Render columns
+					for k, col := range table.Columns {
+						style := normalStyle
+						if m.cursor.schema == i && m.cursor.table == j && m.cursor.column == k {
+							style = selectedStyle
+						}
+
+						columnIndent := "        "
+						columnPrefix := "  "
+						if col.Selected {
+							columnPrefix = "* "
+						}
+
+						columnLine := columnIndent + columnPrefix + col.Name
+						if col.Type != "" {
+							columnLine += ": " + col.Type
+
+							constraints := []string{}
+							if !col.IsNullable {
+								constraints = append(constraints, "NOT NULL")
+							}
+							if col.IsPrimary {
+								constraints = append(constraints, "PRIMARY KEY")
+							}
+							if col.IsUnique {
+								constraints = append(constraints, "UNIQUE")
+							}
+							if col.HasDefault {
+								constraints = append(constraints, fmt.Sprintf("DEFAULT %s", col.Default))
+							}
+							if len(col.Constraints) > 0 {
+								constraints = append(constraints, col.Constraints...)
+							}
+
+							if len(constraints) > 0 {
+								columnLine += " (" + strings.Join(constraints, ", ") + ")"
+							}
+						}
+
+						if col.Description != "" {
+							description := wordwrap.String(col.Description, m.width-len(columnIndent)-4)
+							descriptionLines := strings.Split(description, "\n")
+							for i, line := range descriptionLines {
+								if i == 0 {
+									columnLine += " " + infoStyle.Render("- "+line)
+								} else {
+									columnLine += "\n" + infoStyle.Render(strings.Repeat(" ", len(columnIndent)+4)+line)
+								}
+							}
+						}
+
+						b.WriteString(style.Render(wordwrap.String(columnLine, m.width)) + "\n")
+					}
+				}
+			}
+		}
+	}
+
+	if m.message != "" {
+		b.WriteString("\n" + infoStyle.Render(wordwrap.String(m.message, m.width)))
+	}
+
+	if m.err != nil {
+		b.WriteString("\n" + errorStyle.Render(wordwrap.String(m.err.Error(), m.width)))
 	}
 
 	return b.String()
