@@ -20,6 +20,8 @@ type credsMsg struct {
 	creds *storage.Credentials
 }
 
+type noCredsMsg struct{}
+
 type schemasMsg struct {
 	schemas []postgres.Schema
 }
@@ -49,8 +51,15 @@ func (m *model) deselectAll() {
 func (m model) updateCredentials(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Clear error on any key press
+		m.err = nil
+
 		switch msg.String() {
 		case "enter":
+			// Clear existing data before attempting new connection
+			m.schemas = nil
+			m.client = nil
+
 			creds := &storage.Credentials{
 				Host:     m.inputs[0].Value(),
 				Port:     m.inputs[1].Value(),

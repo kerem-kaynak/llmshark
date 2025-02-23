@@ -2,9 +2,12 @@ package ui
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/kerem-kaynak/llmshark/internal/config"
 	"github.com/kerem-kaynak/llmshark/internal/postgres"
 	"github.com/kerem-kaynak/llmshark/internal/storage"
@@ -15,6 +18,7 @@ type state int
 const (
 	stateInitial state = iota
 	stateCredentials
+	stateLoading
 	stateExplorer
 	stateComment
 	stateEditCredentials
@@ -34,6 +38,7 @@ type model struct {
 	height      int
 	message     string
 	commentText string
+	spinner     spinner.Model
 }
 
 type cursor struct {
@@ -49,24 +54,16 @@ func NewApp(cfg *config.Config) (*tea.Program, error) {
 		return nil, err
 	}
 
-	m := &model{
-		config:    cfg,
-		state:     stateCredentials,
-		credStore: store,
-		cursor: cursor{
-			schema: 0,
-			table:  -1,
-			column: -1,
-		},
-		activeInput: 0,
-	}
+	s := spinner.New()
+	s.Spinner = spinner.MiniDot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Padding(2, 0, 0, 4)
 
 	// Initialize inputs
-	m.inputs = make([]textinput.Model, 5)
+	inputs := make([]textinput.Model, 5)
 	labels := []string{"Host", "Port", "Database", "User", "Password"}
 	defaults := []string{"localhost", "5432", "", "", ""}
 
-	for i := range m.inputs {
+	for i := range inputs {
 		t := textinput.New()
 		t.Placeholder = labels[i]
 		t.SetValue(defaults[i])
@@ -76,12 +73,27 @@ func NewApp(cfg *config.Config) (*tea.Program, error) {
 			t.Focus()
 		}
 
-		if i == len(m.inputs)-1 {
+		if i == len(inputs)-1 {
 			t.EchoMode = textinput.EchoPassword
 			t.EchoCharacter = '•'
 		}
 
-		m.inputs[i] = t
+		inputs[i] = t
+	}
+
+	m := &model{
+		config:    cfg,
+		state:     stateLoading,
+		credStore: store,
+		cursor: cursor{
+			schema: 0,
+			table:  -1,
+			column: -1,
+		},
+		activeInput: 0,
+		spinner:     s,
+		inputs:      inputs,
+		err:         nil,
 	}
 
 	return tea.NewProgram(m, tea.WithAltScreen()), nil
@@ -90,12 +102,16 @@ func NewApp(cfg *config.Config) (*tea.Program, error) {
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		textinput.Blink,
+		m.spinner.Tick,
 		func() tea.Msg {
-			// Check for existing credentials
-			if creds, err := m.credStore.Load(); err == nil && creds != nil {
+			creds, err := m.credStore.Load()
+			if err != nil {
+				return errMsg{err}
+			}
+			if creds != nil {
 				return credsMsg{creds}
 			}
-			return nil
+			return noCredsMsg{}
 		},
 	)
 }
@@ -103,14 +119,14 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Clear error message on any key press
-		if m.err != nil {
+		// If we're in credentials state and there's an error, clear it on any key press
+		if m.state == stateCredentials && m.err != nil {
 			m.err = nil
 		}
 
 		switch msg.String() {
 		case "ctrl+c", "q":
-			if m.state != stateCredentials {
+			if m.state != stateCredentials && m.state != stateLoading {
 				return m, tea.Quit
 			}
 		}
@@ -121,21 +137,44 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case errMsg:
 		m.err = msg.error
+		// Clear schemas and client when there's a connection error
+		m.schemas = nil
+		m.client = nil
+		// Transition to credentials view when there's a connection error
+		m.state = stateCredentials
 		return m, nil
 
 	case credsMsg:
-		return m.handleCredentials(msg.creds)
+		// Clear existing data before attempting new connection
+		m.schemas = nil
+		m.client = nil
+		m.state = stateLoading
+		return m, connectToDB(msg.creds)
 
 	case schemasMsg:
 		m.schemas = msg.schemas
 		m.message = "Schema loaded successfully!"
+		m.state = stateExplorer
 		return m, nil
+
+	case noCredsMsg:
+		m.schemas = nil
+		m.client = nil
+		m.state = stateCredentials
+		return m, nil
+
+	case spinner.TickMsg:
+		var spinnerCmd tea.Cmd
+		m.spinner, spinnerCmd = m.spinner.Update(msg)
+		return m, spinnerCmd
 	}
 
-	var cmd tea.Cmd
+	// Handle state-specific updates
 	switch m.state {
 	case stateCredentials:
 		return m.updateCredentials(msg)
+	case stateLoading:
+		return m, m.spinner.Tick
 	case stateExplorer:
 		return m.updateExplorer(msg)
 	case stateComment:
@@ -144,13 +183,35 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateCredentials(msg)
 	}
 
-	return m, cmd
+	return m, nil
+}
+
+func connectToDB(creds *storage.Credentials) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		client, err := postgres.NewClient(ctx, creds)
+		if err != nil {
+			return errMsg{err}
+		}
+
+		schemas, err := client.GetSchemas(ctx, postgres.DefaultSchemaFilter)
+		if err != nil {
+			return errMsg{err}
+		}
+		return schemasMsg{schemas}
+	}
 }
 
 func (m model) View() string {
 	switch m.state {
 	case stateCredentials:
 		return m.credentialsView()
+	case stateLoading:
+		loadingText := fmt.Sprintf("%s Loading...", m.spinner.View())
+		if m.err != nil {
+			loadingText += "\n\n" + errorStyle.Render(m.err.Error())
+		}
+		return loadingText
 	case stateExplorer:
 		return m.explorerView()
 	case stateComment:
@@ -158,7 +219,7 @@ func (m model) View() string {
 	case stateEditCredentials:
 		return m.credentialsView()
 	default:
-		return "Loading..."
+		return fmt.Sprintf("%s Loading...", m.spinner.View())
 	}
 }
 
